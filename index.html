@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vibration Graphs</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        padding-top: 4rem;
+        margin: auto;
+        width : 85%;
+
+    }
+   /* .container {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }*/
+    .chart-container {
+        margin-bottom: 2rem;
+    }
+    .input-container {
+        background-color: #e7f2f8;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 2rem;
+    }
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+    }
+    input[type="text"] {
+        width: 100%;
+        padding: 1rem;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        font-size: 1.1rem;
+    }
+    .chart{
+        display:inline-block;
+    }
+
+    #bike{margin-top: -130%;
+    margin-left: 80em;
+    height:40em}  
+
+        hr{
+            border: 1px solid black;
+
+        }
+    .fcontainer{
+        max-width: 114em;
+        margin: auto;
+    }
+    .fcontent{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    footer{
+        background-color: #333;
+        color: #fff;
+        font-size:small;
+        margin-top: auto;
+        width : 100%;
+        margin-left: 1px;
+        margin-right: 1px;
+    }
+    li{
+        margin-right:0%;
+    }
+    iot{
+        text-align: center;
+    }
+</style>
+</head>
+<body>
+    <img src="nielitlogo.jpg" alt="logo" width="18%" height="50%"><img src="bar.jpg" alt="" width="1%" height="50%"><img src="nielittext.jpg" alt="" width="50%" height="50%">
+<img src="meity.jpg" alt="" width="30%" height="50%">
+<hr>
+<h1 id="iot">IoT & Robotics Lab</h1>
+<div>
+    
+    <div class="chart">
+        <br>
+   
+    <div class="chart-container">
+        <canvas id="accelerationChart" width="400" height="200"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="rollChart" width="400" height="200"></canvas>
+    </div>
+    <div class="chart-container">
+        <canvas id="vibrationChart" width="400" height="200"></canvas>
+    </div>
+    <div class="input-container">
+        <div class="row">
+            <div class="col-md-4">
+                <label for="acceleration">Acceleration :</label>
+                <input type="text" id="acceleration" name="acceleration" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label for="vibration">Vibration</label>
+                <input type="text" id="vibration" name="vibration" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label for="speed">Speed</label>
+                <input type="text" id="speed" name="speed" class="form-control">
+            </div>
+        </div>
+    </div>
+        <div class="row">
+            <div class="col-md-4">
+                <label for="roll">Leaning Angle</label>
+                <input type="text" id="roll" name="roll" class="form-control">
+            </div>
+            <!--div class="col-md-4">
+                <label for="rotationY">Rotation Y:</label>
+                <input type="text" id="rotationY" name="rotationY" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label for="rotationZ">Rotation Z:</label>
+                <input type="text" id="rotationZ" name="rotationZ" class="form-control">
+            </div-->
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <label for="temperature">Temperature:</label>
+                <input type="text" id="temperature" name="temperature" class="form-control">
+            </div>
+        </div>
+    </div>
+    <img src="bike-riding.jpeg" alt="" id="bike">
+
+</div>
+
+<script>
+    const client_id = "music";
+    const host = "ws://broker.emqx.io:8083/mqtt";
+    
+
+    const options = {
+        username: 'emqx',
+        password: 'public',
+        client_id: client_id,
+        clean: 'true',
+    };
+
+    console.log('Connecting mqtt client');
+    const client = mqtt.connect(host, options);
+
+    client.on('error', (err) => {
+        console.log('Connection error:', err);
+        client.end();
+    });
+
+    client.on('connect', () => {
+        console.log("connected");
+        client.subscribe('data', { qos: 0 }); // Topic name
+    });
+    
+    // Initialize charts
+    var accelerationChart = createChart('accelerationChart', 'Acceleration', [''], [
+        'rgba(255, 99, 132, 1)', // Red
+        'rgba(54, 162, 235, 1)', // Blue
+        'rgba(255, 206, 86, 1)'  // Yellow
+    ]);
+    var rollChart = createChart('rollChart', 'Leaning Angle', [''], [
+        'rgba(255, 99, 132, 1)', // Red
+        'rgba(54, 162, 235, 1)', // Blue
+        'rgba(255, 206, 86, 1)'  // Yellow
+    ]);
+   // var temperatureChart = createChart('temperatureChart', ['Temperature'], ['rgba(255, 99, 132, 1)']);
+   var vibrationChart = createChart('vibrationChart', 'Vibration', [''], ['rgba(255, 99, 132, 1)']);
+    //var temperatureChart = createChart('temperatureChart', 'Temperature', ['rgba(255, 99, 132, 1)']);
+
+
+
+    client.on('message', (topic, message) => {
+        console.log(`Received message from ${topic} is ${message.toString()}.`)
+
+       // var vibe = message.toString().split(/[\s:,{}]+/);
+        var vibe = JSON.parse(message.toString());
+        console.log(vibe);
+
+        var timestamp = new Date().toLocaleTimeString();
+
+        updateChart(accelerationChart, timestamp, [parseFloat(vibe.Acceleration)]);
+        updateChart(rollChart, timestamp, [parseFloat(vibe.Roll)]);
+        updateChart(vibrationChart, timestamp, [parseFloat(vibe.Vibration)]);
+
+        // Update input boxes
+        document.getElementById('acceleration').value = vibe.Acceleration;
+        document.getElementById('roll').value = vibe.Roll;
+        document.getElementById('vibration').value = vibe.Vibration;
+        document.getElementById('temperature').value = vibe.Temperature;
+        //code for motorbike
+    const motorcycle = document.getElementById('bike');
+
+    const angle = parseInt(vibe.Roll);
+    adjustAngle(angle);
+
+    function adjustAngle(angle){
+        motorcycle.style.transform = `rotate(${angle}deg)`;
+    }
+    });
+
+    function createChart(canvasId, label, dataLabels, colors) {
+        var ctx = document.getElementById(canvasId).getContext('2d');
+        return new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: dataLabels.map((dataLabel, index) => ({
+                    label: label + ' ' + dataLabel,
+                    data: [],
+                    borderColor: colors[index],
+                    borderWidth: 1
+                }))
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateChart(chart, timestamp, values) {
+        chart.data.labels.push(timestamp);
+        values.forEach((value, index) => {
+            chart.data.datasets[index].data.push(value);
+        });
+        chart.update();
+    }
+</script>
+
+
+
+<footer class="fcontainer">
+    <div class="fcontent">
+    <p> &copy; 2024 Shri Anil Kumar Shaw. All rights reserved.</p>
+    <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Use</a></li>
+    </ul>
+</div><div class="break"></div></footer>
+</body>
+</html>
